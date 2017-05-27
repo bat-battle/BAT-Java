@@ -1,215 +1,326 @@
-# 关于Java面试，你应该准备这些知识点
-
-项目经验
-
-面试官在一开始会让你进行自我介绍，主要是想让你介绍一下自己做过的一些项目，看看你对这些项目的了解程度，因为很多人简历上写的项目并非都是从头到尾都参与的，有些只是参与并实现了其中的一些模块而已，或是接手维护别人的项目，所以在你简历上所写的和面试过程中所说的项目经验，你自己必须能够了解来龙去脉，因为面试官肯定会根据你的项目描述，对项目中的实现原理，或为什么要这样实现进行提问，这时不至于木讷住而不知如何作答，如此局面只会大大降低面试分。
-
-场景对话：
-面试官：（拿着简历）讲讲你最近做的这个项目
-
-我：&……%￥#*&￥@%￥！，说了一大通（不知道面试官听进去多少，面试官会挑他会的进行提问）
-
-面试官：你说这个项目中用到了netty，能大概讲讲netty的线程模型么？
-
-我：（幸好我看过netty的源码）netty通过Reactor模型基于多路复用器接收并处理用户请求（能讲就多讲一点），内部实现了两个线程池，boss线程池和work线程池，其中boss线程池的线程负责处理请求的accept事件，当接收到accept事件的请求时，把对应的socket封装到一个NioSocketChannel中，并交给work线程池，其中work线程池负责请求的read和write事件（通过口述加画图的方式，把请求的执行过程大概描述了一遍，时间有限，也不可能把所有的细节都说完，挑重点讲，挑记忆深刻的讲）
-
-面试官：嗯，理解的还挺深入的...那你在做这个项目时有没有遇到什么困难，或者是觉得有挑战的地方？
-
-我：（这时面试官想让你自己出题自己回答了，所以一定要回答，不回答就突显不出你这个项目了，要是这个问题没有准备过，只能临时发挥了，当然我就是属于临时发挥的）稍微想一下，因为之前确实碰到了这个问题，当时做这个项目时，对netty的不过熟悉，把请求的业务逻辑放在work线程池的线程中进行处理，进行压测的时候，发现qps总是上不去，后来看了源码之后才发现，由于业务逻辑的处理比较耗时，完全占用了work线程池的资源，导致新的请求一直处于等待状态。
-
-面试官：那最后是如何解决的？
-
-我：最后把处理业务的逻辑封装成一个task提交给一个新建的业务线程池中执行，执行完之后由work线程池执行请求的write事件。
-
-面试官：好的，你知道nio中selector可能触发bug么？
-
-我：嗯，对的，selector的select方法，因为底层的epoll函数可能会发生空转，从而导致cpu100%。
-
-面试官：那如何解决该问题？
-
-我：这个问题在netty已经解决了，通过&^%&$^（把netty的解决方案说一遍）
-
-面试官：嗯，对了，你们这个项目有给自己定指标么？
-
-我：有的，&&…………￥￥##@，把自己项目的指标说了一通，如何进行AB实验，如何迭代优化指标
-
-面试官：嗯，好的 ，项目的问题先到这里，我们来考察一下java的基本点吧。
-
-如上只是本人所做的一个项目，当然了，具体项目具体分析，也不是每个面试官问的点都一样，如果面试官不懂netty，自然会挑别的问题进行提问，不过你也可以尝试着把问题往自己熟悉的方向去靠。
-
-面试知识点
-
-1、线程池
-
-线程池的实现原理，这个知识点真的很重要，几乎每次面试都会被问到，一般的提问方式有如下几种：
-1、“讲讲线程池的实现原理”
-2、“线程池中的coreNum和maxNum有什么不同”
-3、“在不同的业务场景中，线程池参数如何设置”
-
-场景对话：
-面试官：平时线程池用的多么？
-
-我：嗯，我的*项目中就用到了
-
-面试官：那好，你讲讲线程池的实现原理
-
-我：（还好我之前看过源码，但是时间久远有点模糊了），能给我笔和纸么，我画图分析给你看看，&&￥&假设初始化一个线程池，核心线程数是5，最大线程数是10@@@
-
-面试官：嗯，好的，你继续...
-
-我：在纸上画了正方形，这个代表一个线程池，初始化的时候，里面是没有线程的
-
-面试官：嗯，好的，你继续...
-
-我：又画了一个细长的长方形，这个代表阻塞队列，一开始里面也是没有任务的
-
-面试官：嗯，好的，你继续...
-
-我：当来了一个任务时，在正方形中画了一个小圆圈，代表初始化了一个线程，如果再来一个任务，就再画一个圆圈，表示再初始化了一个线程，连续画了5个圆圈之后，如果第6个任务过来了...
-
-面试官：嗯，好的，你继续...
-
-我：这时会把第6个任务放到阻塞队列中..
-
-面试官：嗯，然后呢？
-
-我：现在线程池中不是有5个线程了么，如果其中一个线程空闲了，就会从阻塞队列中获取第6个任务，进行执行..
-
-面试官：嗯，对的，那如果任务产生的速度比消费的速度快呢？
-
-我：如果线程池的5个线程都在running状态，那么任务就先保存在阻塞队列中
-
-面试官：如果队列满了，怎么办？
-
-我：如果队列满了，我们不是设置了最大线程数是10么，而线程池中只有5个线程，这时会新建一个线程去执行不能保存到阻塞队列的任务，然后我又在正方形中画了5个圆圈。
-
-面试官：那如果线程池中的线程数达到10个了，阻塞队列也满了，怎么办？
-
-我：这种情况通过自定义reject函数去处理这里任务了，舒了一口去，以为问完了...
-
-面试官：好的，那如果运行一段时间之后，阻塞队列中的任务也执行完了，线程池中的线程会怎么样？
-
-我：...这个好像超过核心线程数的线程会在空闲一段时间内自动回收...因为有点不记得这个逻辑了，回答的有点虚...
-
-面试官：好的，那这种情况在什么场景下会发生?
-
-我：（有时候真是笨啊，很多东西都知道，但是在面试的时候一紧张，全忘记）这个...那个...我好像没有遇到过这样的情况
-
-面试官：嗯，好的，你回去之后再好好想想
-
-我：........
-
-我居然忘记了秒杀这个场景
-
-线程池分析的文章：
-[深入分析java线程池的实现原理](深入分析java线程池的实现原理)
-
-
-2、锁的实现
-
-在关于锁的面试过程中，一般主要问Synchronized和ReentrantLock的实现原理，更有甚者会问读写锁。
-
-场景对话：
-面试官：都了解Java中的什么锁？
-
-我：比如Synchronized和ReentrantLock...读写锁用的不多，就没研究了（我就怕被问读写锁，因为一直没去看）
-
-面试官：那好，你先说说Synchronized的实现原理吧
-
-我：嗯，Synchronized是JVM实现的一种锁，其中锁的获取和释放分别是monitorenter和monitorexit指令，该锁在实现上分为了偏向锁、轻量级锁和重量级锁，其中偏向锁在1.6是默认开启的，轻量级锁在多线程竞争的情况下会膨胀成重量级锁，有关锁的数据都保存在对象头中...&&@@#，（嗯，说了一大堆，面试官也没打断我）
-
-面试官：哦，嗯，理解的还挺透彻，那你说说ReentrantLock的实现吧...
-
-我：ReentrantLock是基于AQS实现的
-
-面试官：什么是AQS？
-
-我：在AQS内部会保存一个状态变量state，通过CAS修改该变量的值，修改成功的线程表示获取到该锁，没有修改成功，或者发现状态state已经是加锁状态，则通过一个Waiter对象封装线程，添加到等待队列中，并挂起等待被唤醒&&&$$（又说了一堆）
-
-面试官：能说说CAS的实现原理么？
-
-我：CAS是通过unsafe类的compareAndSwap方法实现的（心里得意的一笑）
-
-面试官：哦，好的，那你知道这个方法的参数的含义的么？
-
-我：（这是在逼我啊...努力的回想，因为我真的看过啊）我想想啊，这个方法看的时间有点久远了，第一个参数是要修改的对象，第二个参数是对象中要修改变量的偏移量，第三个参数是修改之前的值，第四个参数是预想修改后的值....（说出来之后都有点佩服自己，这个都记得，不过面试官好像还是不肯放过我...）
-
-面试官：嗯，对的，那你知道操作系统级别是如何实现的么？
-
-我：（我去你大爷...）我只记得X86中有一个cmp开头的指令，具体的我忘记了...
-
-面试官：嗯，好，你知道CAS指令有什么缺点么
-
-我：哦，CAS的缺点是存在ABA问题
-
-面试官：怎么讲？
-
-我：就是一个变量V，如果变量V初次读取的时候是A，并且在准备赋值的时候检查到它仍然是A，那能说明它的值没有被其他线程修改过了吗？如果在这段期间它的值曾经被改成了B，然后又改回A，那CAS操作就会误认为它从来没有被修改过。
-
-面试官：那怎么解决？
-
-我：（有完没完了啊...我的心里是崩溃的）针对这种情况，java并发包中提供了一个带有标记的原子引用类"AtomicStampedReference"，它可以通过控制变量值的版本来保证CAS的正确性。
-
-面试官：嗯，好的，这个问题到此为止，我们再看看别的
-
-我：....我能喝口水么
-
-关于锁分析的文章，希望对大家有用：
-[深入浅出java同步器AQS](http://www.jianshu.com/p/d8eeb31bee5c)
-[java中的CAS](http://www.jianshu.com/p/fb6e91b013cc)
-[深入浅出synchronized](http://www.jianshu.com/p/19f861ab749e)
-[java volatile关键字解惑](http://www.jianshu.com/p/195ae7c77afe)
-[深入分析synchronized的JVM实现](http://www.jianshu.com/p/c5058b6fe8e5)
-
-3、ConcurrentHashMap
-
-当考察数据结构时，面试官一开始会问HashMap的实现原理，当你说出HashMap并非线程安全之后，会让你自己引出ConcurrentHashMap，接着就可能开始如下的对话。
-
-场景对话：
-面试官：谈谈ConcurrentHashMap实现原理
-
-我：@＃¥@@基于分段锁的％％¥＃@＃¥，但是1.8之后改变实现方式了
-
-面试官：1.8啥方式
-
-我：把1.8的实现原理说了一通，其中提到了红黑树...
-
-面试官：能讲下红黑树的概念吗
-
-我：红黑树是一种二叉树，并且是平衡……％……¥……，
-
-面试官：能讲下红黑树的。。。。。
-
-我：打住，别问了，红黑树我只知道他是二叉树，比其他树多一个属性，其他的我都不知道
-面试官：好的，那换个，你知道它的size方法是如何实现的么？
-
-我：size方法？是想要得到Map中的元素个数么？
-
-面试官：对的....
-
-我：我记得好像size方法返回是不准确的，平时也不会用到这个方法...
-
-面试官：如果你觉得size方法返回值不准确，那如果让你自己实现，你觉得应该怎么实现呢？
-
-我：...@＃¥@@...两眼一黑
-
-我：等等，让我想想.....应该可以用AtomicInteger变量进行记录...嗯，对的，每次插入或删除的时候，操作这个变量，我得意的一笑...
-
-面试官：哦，是么，那如果我觉得这个AtomicInteger这个变量性能不好，还能再优化么？
-
-我：懵逼脸...（当时居然把volitile变量给忘记了）...好像没有了，我想不出来了...
-
-面试官：哦，那回头你再看看源码吧，jdk中已经实现了...
-
-我：哦，是么....
-
-面试官：那今天的面试到此结束，我们后面会通知你。
-
-我：..................
-
-关于ConcurrentHashMap，本人也写过不少的分析文章，希望对大家有用：
-[深入浅出ConcurrentHashMap（1.8）](http://www.jianshu.com/p/c0642afe03e0)
-[谈谈ConcurrentHashMap1.7和1.8的不同实现](http://www.jianshu.com/p/e694f1e868ec)
-[ConcurrentHashMap的红黑树实现分析](http://www.jianshu.com/p/23b84ba9a498)
-[深入分析ConcurrentHashMap1.8的扩容实现](http://www.jianshu.com/p/f6730d5784ad)
-
+## JAVA
+
+### 关键字
+
+void byte int long char short float double String StringBuffer StringBuilder Array Collection Collections List ArrayList LinkedList Vector Set HashMap TreeMap LinkedHashMap ConcerrentHashMap Set TreeMap HashMap synchronized volatile transient implements extends public private protected this super static final const null run start thread enmu quicksort mergesort heapsort bubblesort selectsort insertsort stack queue list heap tree avlTree Btree B+Tree RTree throw throws try catch finally break continue instanceof
+
+### java基础
+
+#### 概念
+
+- 面向对象的三大基本特征、五大基本原则
+- 面向过程、面向对象、基于对象和继承、派生、多态：http://www.i3geek.com/archives/580
+- 编程思想，幻数：http://www.i3geek.com/archives/622
+
+#### 集合类：
+
+	http://www.i3geek.com/archives/616
+	http://www.i3geek.com/archives/1233
+ 
+- HashMap实现原理,源码阅读 http://www.i3geek.com/archives/1262
+- HashMap中Key的约束
+- HashMap与HashTable的区别
+- HashMap与HashSet的关系:http://www.importnew.com/6931.html hashSet是由hashmap实现的
+- HashSet的原理：http://www.importnew.com/19208.html
+- ArrayList的用法
+- List、Set和Map的继承关系
+- Collection 和 Collections的区别
+- 其他集合类
+
+#### 继承和接口
+
+- interface和abstrat class抽象类的意义与区别:http://www.i3geek.com/archives/1230
+- 实现接口，继承类的规则（单继承多实现）
+- 接口继承接口
+- 继承多个抽象类？
+- Overload和Override的区别。Overloaded的方法是否可以改变返回值的类型?
+- 对String类的继承
+- abstract的method是否可同时是static,是否可同时是native，是否可同时是synchronized
+- 构造器Constructor是否可被override?
+
+#### 异常处理
+
+- Error、Exception和RuntimeException的区别，作用又是什么？列举3个以上的RuntimeException
+- Java中的异常处理机制的简单原理和应用
+- 内存溢出和内存泄露
+
+#### 管道流
+
+- inputStream和outputStream
+- reader和inputstream
+- Input/OutputStream和Reader/Writer有的区别
+- 理解字符和字节
+- 一层层的流结构学会字符流和字节流的转换
+
+#### 线程
+
+- 线程的生命周期：http://www.i3geek.com/archives/859
+- java线程池：http://www.i3geek.com/archives/823
+- 对run和start方法的理解
+- 线程同步的基本方法
+- 死锁的问题
+
+#### 其他
+
+- 四种引用，强引用、软引用、弱引用和虚引用 ：http://www.i3geek.com/archives/1239
+- String与StringBuilder,StringBuffer的区别
+- StringBuffer的实现方式，容量扩充
+- 对于 String str ="1"+"2"; 产生了几个对象
+- equal与==的区别
+- hashCode的作用
+- 为什么重写equals就必须重写hashCode
+- 自动拆装箱：http://www.i3geek.com/archives/990
+- NIO
+- java动态代理
+- 序列化与反序列化
+- public、protected、private以及默认的作用域
+- Object类的学习和理解，基本的方法
+- char类型的大小，对汉字的存储
+- java中传值和传引用的理解，四种引用
+- 正则表达式
+
+### Java进阶
+
+#### 多线程
+
+- 多线程要注意什么？
+- volatile的关键字学习
+- 多线程保证同步的所有方法，除了synchronized外还有什么？
+- java中sleep和wait的区别：http://www.i3geek.com/archives/1173
+- 理解和使用wait/notify
+- 如何保证线程的同步和并发
+- 守护线程的含义
+- 正确的停止一个线程
+- 对synchronized的理解，锁的是什么？锁静态方法和非静态方法的区别
+
+#### 虚拟机
+
+##### 内存结构
+
+- 虚拟机的内存结构，堆内存、栈内存、方法区、常量池等：http://www.i3geek.com/archives/1201
+- JVM中的内存设置和分配：http://www.i3geek.com/archives/1138
+- 分别存储什么，对象和基本成员变量的存储区域
+
+##### GC垃圾回收
+
+`http://www.i3geek.com/archives/1220`
+
+- gc的概念，什么需要回收？
+- 怎么判断被回收？有哪些方法
+- 引用计数方法，对象引用遍历和分代回收方法是什么
+- 怎么避免对象循环引用的回收
+- Java中的内存溢出是如何造成的：http://www.i3geek.com/archives/1241
+- Java中的内存溢出和C＋＋中的内存溢出，是一个概念吗？：http://www.i3geek.com/archives/1241
+
+##### CLASSLOADER
+
+- 什么是类加载器
+- 哪三层类加载器
+- 什么加载顺序
+- 功能是什么？工作模式是什么？
+- 项目中的例子，加载必要jar包
+- 反射的原理，什么是反射？
+- 反射的运用，反射是否可以调用私有方法
+
+#### 其他
+
+- NIO是什么
+- PRC远程服务原理及作用：http://www.i3geek.com/archives/941
+- JMS消息服务框架
+- io和nio的本质以及使用场景
+- java 8的新特性
+- hashcode 有哪些算法
+- 泛型的实现机制
+- Socket编程通常出现的异常有哪些，什么情况下会出现
+- 了解JVM启动参数 -verbose -Xms -Xmx的意思
+
+### J2EE
+
+#### 基本概念
+
+- 分清javaEE、Tomcat、JVM等概念：http://www.i3geek.com/archives/848
+
+#### Servlet
+
+- servlet的基本概念
+- servlet的生命周期
+- servlet中定制session的过期时间
+- Servlet中的session工作原理 （禁用cookie如何使用session）
+- filter和listener是什么？有什么区别？servlet、filter、listener：http://www.i3geek.com/archives/870
+- JSP和Servlet的区别、共同点（JSP的工作原理）。
+
+#### Web框架
+
+- MVC模型概念
+- Spring如何实现AOP和IOC的？- 
+- Spring IoC 中的BeanFactory：http://www.i3geek.com/archives/878
+- Spring AOP 原理：http://www.i3geek.com/archives/912
+- Spring的事务管理 ，Spring bean注入的几种方式
+
+# java面试
+## 基础   
+
+Arrays.sort实现原理和Collection实现原理   
+foreach和while的区别(编译之后)   
+线程池的种类，区别和使用场景   
+分析线程池的实现原理和线程的调度过程   
+线程池如何调优   
+线程池的最大线程数目根据什么确定   
+动态代理的几种方式   
+HashMap的并发问题   
+了解LinkedHashMap的应用吗  
+反射的原理，反射创建类实例的三种方式是什么？   
+cloneable接口实现原理，浅拷贝or深拷贝   
+Java NIO使用   
+hashtable和hashmap的区别及实现原理，hashmap会问到数组索引，hash碰撞怎么解决   
+arraylist和linkedlist区别及实现原理   
+反射中，Class.forName和ClassLoader区别   
+String，Stringbuffer，StringBuilder的区别？   
+有没有可能2个不相等的对象有相同的hashcode   
+简述NIO的最佳实践，比如netty，mina   
+TreeMap的实现原理   
+
+### JVM相关   
+
+类的实例化顺序，比如父类静态数据，构造函数，字段，子类静态数据，构造函数，字段，他们的执行顺序   
+JVM内存分代   
+Java 8的内存分代改进   
+JVM垃圾回收机制，何时触发MinorGC等操作   
+jvm中一次完整的GC流程（从ygc到fgc）是怎样的，重点讲讲对象如何晋升到老年代，几种主要的jvm参数等   
+你知道哪几种垃圾收集器，各自的优缺点，重点讲下cms，g1   
+新生代和老生代的内存回收策略   
+Eden和Survivor的比例分配等   
+深入分析了Classloader，双亲委派机制   
+JVM的编译优化   
+对Java内存模型的理解，以及其在并发中的应用   
+指令重排序，内存栅栏等   
+OOM错误，stackoverflow错误，permgen space错误   
+JVM常用参数   
+tomcat结构，类加载器流程   
+volatile的语义，它修饰的变量一定线程安全吗    
+g1和cms区别,吞吐量优先和响应优先的垃圾收集器选择    
+说一说你对环境变量classpath的理解？如果一个类不在classpath下，为什么会抛出ClassNotFoundException异常，如果在不改变这个类路径的前期下，怎样才能正确加载这个类？   
+说一下强引用、软引用、弱引用、虚引用以及他们之间和gc的关系      
+
+### JUC/并发相关   
+
+ThreadLocal用过么，原理是什么，用的时候要注意什么   
+Synchronized和Lock的区别   
+synchronized 的原理，什么是自旋锁，偏向锁，轻量级锁，什么叫可重入锁，什么叫公平锁和非公平锁   
+concurrenthashmap具体实现及其原理，jdk8下的改版   
+用过哪些原子类，他们的参数以及原理是什么   
+cas是什么，他会产生什么问题（ABA问题的解决，如加入修改次数、版本号）   
+如果让你实现一个并发安全的链表，你会怎么做   
+简述ConcurrentLinkedQueue和LinkedBlockingQueue的用处和不同之处   
+简述AQS的实现原理    
+countdowlatch和cyclicbarrier的用法，以及相互之间的差别?   
+concurrent包中使用过哪些类？分别说说使用在什么场景？为什么要使用？  
+LockSupport工具   
+Condition接口及其实现原理   
+Fork/Join框架的理解   
+jdk8的parallelStream的理解   
+分段锁的原理,锁力度减小的思考    
+
+## Spring   
+
+Spring AOP与IOC的实现原理   
+Spring的beanFactory和factoryBean的区别   
+为什么CGlib方式可以对接口实现代理？   
+RMI与代理模式   
+Spring的事务隔离级别，实现原理   
+对Spring的理解，非单例注入的原理？它的生命周期？循环注入的原理，aop的实现原理，说说aop中的几个术语，它们是怎么相互工作的？  
+Mybatis的底层实现原理      
+MVC框架原理，他们都是怎么做url路由的   
+spring boot特性，优势，适用场景等   
+quartz和timer对比   
+spring的controller是单例还是多例，怎么保证并发的安全   
+
+## 分布式相关    
+
+Dubbo的底层实现原理和机制   
+描述一个服务从发布到被消费的详细过程   
+分布式系统怎么做服务治理   
+接口的幂等性的概念   
+消息中间件如何解决消息丢失问题    
+Dubbo的服务请求失败怎么处理   
+重连机制会不会造成错误   
+对分布式事务的理解   
+如何实现负载均衡，有哪些算法可以实现？  
+Zookeeper的用途，选举的原理是什么？      
+数据的垂直拆分水平拆分。  
+zookeeper原理和适用场景   
+zookeeper watch机制   
+redis/zk节点宕机如何处理    
+分布式集群下如何做到唯一序列号   
+如何做一个分布式锁   
+用过哪些MQ，怎么用的，和其他mq比较有什么优缺点，MQ的连接是线程安全的吗   
+MQ系统的数据如何保证不丢失   
+列举出你能想到的数据库分库分表策略；分库分表后，如何解决全表查询的问题。   
+
+## 算法&数据结构&设计模式   
+
+海量url去重类问题（布隆过滤器）  
+数组和链表数据结构描述，各自的时间复杂度   
+二叉树遍历   
+快速排序   
+BTree相关的操作    
+在工作中遇到过哪些设计模式，是如何应用的   
+hash算法的有哪几种，优缺点，使用场景   
+什么是一致性hash   
+paxos算法   
+在装饰器模式和代理模式之间，你如何抉择，请结合自身实际情况聊聊   
+代码重构的步骤和原因，如果理解重构到模式？   
+
+## 数据库   
+
+MySQL InnoDB存储的文件结构   
+索引树是如何维护的？   
+数据库自增主键可能的问题  
+MySQL的几种优化   
+mysql索引为什么使用B+树   
+数据库锁表的相关处理   
+索引失效场景    
+高并发下如何做到安全的修改同一行数据，乐观锁和悲观锁是什么，INNODB的行级锁有哪2种，解释其含义     
+数据库会死锁吗，举一个死锁的例子，mysql怎么解决死锁     
+
+## Redis&缓存相关   
+
+Redis的并发竞争问题如何解决了解Redis事务的CAS操作吗   
+缓存机器增删如何对系统影响最小，一致性哈希的实现   
+Redis持久化的几种方式，优缺点是什么，怎么实现的   
+Redis的缓存失效策略    
+缓存穿透的解决办法   
+redis集群，高可用，原理     
+mySQL里有2000w数据，redis中只存20w的数据，如何保证redis中的数据都是热点数据   
+用Redis和任意语言实现一段恶意登录保护的代码，限制1小时内每用户Id最多只能登录5次   
+redis的数据淘汰策略   
+
+## 网络相关   
+
+http1.0和http1.1有什么区别   
+TCP/IP协议   
+TCP三次握手和四次挥手的流程，为什么断开连接要4次,如果握手只有两次，会出现什么   
+TIME_WAIT和CLOSE_WAIT的区别   
+说说你知道的几种HTTP响应码   
+当你用浏览器打开一个链接的时候，计算机做了哪些工作步骤   
+TCP/IP如何保证可靠性，数据包有哪些数据组成    
+长连接与短连接     
+Http请求get和post的区别以及数据包格式   
+简述tcp建立连接3次握手，和断开连接4次握手的过程；关闭连接时，出现TIMEWAIT过多是由什么原因引起，是出现在主动断开方还是被动断开方。    
+
+## 其他  
+
+maven解决依赖冲突,快照版和发行版的区别   
+Linux下IO模型有几种，各自的含义是什么  
+实际场景问题，海量登录日志如何排序和处理SQL操作，主要是索引和聚合函数的应用   
+实际场景问题解决，典型的TOP K问题   
+线上bug处理流程   
+如何从线上日志发现问题    
+linux利用哪些命令，查找哪里出了问题（例如io密集任务，cpu过度）   
+场景问题，有一个第三方接口，有很多个线程去调用获取数据，现在规定每秒钟最多有10个线程同时调用它，如何做到。    
+用三个线程按顺序循环打印abc三个字母，比如abcabcabc。   
+常见的缓存策略有哪些，你们项目中用到了什么缓存系统，如何设计的   
+设计一个秒杀系统，30分钟没付款就自动关闭交易（并发会很高）   
+请列出你所了解的性能测试工具   
+后台系统怎么防止请求重复提交？   
+有多个相同的接口，我想客户端同时请求，然后只需要在第一个请求返回结果的时候返回给客户端     
