@@ -157,7 +157,10 @@ void byte int long char short float double String StringBuffer StringBuilder Arr
 - Spring AOP 原理：http://www.i3geek.com/archives/912
 - Spring的事务管理 ，Spring bean注入的几种方式
 
-# java面试
+# java面试(一线企业校招、社招)
+>友情提示：下面面试题和技术难度，主要正对国内一线企业校招和社招，请量力而为，不要信心受挫。
+>故，做为致力于一线企业校招的你来说，能把每个知识模块的一小部分问题去深入学习和总结，已经很棒了，加入BAT企业“随心所欲”！
+
 ## 基础   
 
 Arrays.sort实现原理和Collection实现原理   
